@@ -46,7 +46,7 @@
 ## 2. 前端
 
 - **Next.js 14 (App Router) + TypeScript**
-- **Tailwind CSS + shadcn/ui**（快速出样式，后期按 GMGN 风格覆盖）
+- **Ant Design v5**（组件库）+ `@ant-design/nextjs-registry`（App Router SSR）；zh_CN locale；dark algorithm 主题
 - **TanStack Query**（REST 数据缓存与刷新）
 - **wagmi + viem**（链上交互、合约读取）
 - **Privy SDK**（登录 + 嵌入式钱包 + EIP-712 签名）
