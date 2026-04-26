@@ -1,70 +1,108 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
-import { Alert, Button, Descriptions, Space, Typography } from "antd";
-
-const { Title, Paragraph } = Typography;
-
-const hasPrivy = Boolean(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
+import { useEffect, useState, useMemo } from "react";
+import { Search } from "lucide-react";
+import { Navbar } from "@/components/Navbar";
+import { CategoryTabs } from "@/components/CategoryTabs";
+import { MarketCard } from "@/components/MarketCard";
+import { FeaturedHero } from "@/components/FeaturedHero";
+import { TrendingSidebar } from "@/components/TrendingSidebar";
+import { getEvents } from "@/services/market";
+import type { Event } from "@/types/market";
 
 export default function HomePage() {
-  return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
-      <Title level={2}>Smart Polymarket</Title>
-      <Paragraph type="secondary">
-        Polymarket 聪明钱数据层。当前是骨架版本，登录后会自动创建 Privy 嵌入式钱包。
-      </Paragraph>
+  const [events, setEvents] = useState<Event[]>([]);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [search, setSearch] = useState("");
 
-      {hasPrivy ? <LoginPanel /> : <PrivyMissingNotice />}
-    </main>
-  );
-}
+  useEffect(() => {
+    getEvents().then(setEvents);
+  }, []);
 
-function PrivyMissingNotice() {
-  return (
-    <Alert
-      type="warning"
-      showIcon
-      message="未配置 NEXT_PUBLIC_PRIVY_APP_ID"
-      description={
-        <span>
-          把 <code>.env.example</code> 复制为 <code>.env.local</code>，填入 Privy Dashboard 的 App ID 后重启 dev server。
-        </span>
-      }
-    />
-  );
-}
+  // Featured event: highest volume
+  const featuredEvent = useMemo(() => {
+    if (events.length === 0) return null;
+    return [...events].sort((a, b) => b.volume - a.volume)[0]!;
+  }, [events]);
 
-function LoginPanel() {
-  const { ready, authenticated, user, login, logout } = usePrivy();
+  const filtered = useMemo(() => {
+    let result = events;
+    // Exclude featured from grid
+    if (featuredEvent && activeCategory === "all" && !search.trim()) {
+      result = result.filter((e) => e.id !== featuredEvent.id);
+    }
+    if (activeCategory !== "all" && activeCategory !== "trending") {
+      result = result.filter((e) => e.category === activeCategory);
+    }
+    if (activeCategory === "trending") {
+      result = [...result].sort((a, b) => b.volume - a.volume).slice(0, 8);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((e) => e.title.toLowerCase().includes(q));
+    }
+    return result;
+  }, [events, activeCategory, search, featuredEvent]);
 
-  if (!ready) {
-    return <Paragraph>加载 Privy…</Paragraph>;
-  }
-
-  if (!authenticated) {
-    return (
-      <Space>
-        <Button type="primary" size="large" onClick={login}>
-          登录 / 注册
-        </Button>
-      </Space>
-    );
-  }
-
-  const wallet = user?.wallet?.address;
-  const email = user?.email?.address;
+  const showHero = activeCategory === "all" && !search.trim() && featuredEvent;
 
   return (
-    <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      <Descriptions title="已登录" column={1} bordered size="small">
-        <Descriptions.Item label="Privy ID">{user?.id}</Descriptions.Item>
-        <Descriptions.Item label="邮箱">{email ?? "—"}</Descriptions.Item>
-        <Descriptions.Item label="嵌入式钱包">
-          {wallet ? <code>{wallet}</code> : "未创建"}
-        </Descriptions.Item>
-      </Descriptions>
-      <Button onClick={logout}>退出</Button>
-    </Space>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      {/* Sub-header: search */}
+      <div className="border-b border-border">
+        <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search markets..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-md border border-input bg-background py-1.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Category tabs */}
+      <div className="mx-auto max-w-7xl px-6">
+        <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
+      </div>
+
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        {/* Hero section: Featured + Trending sidebar */}
+        {showHero && (
+          <div className="mb-8 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px]">
+            <FeaturedHero event={featuredEvent} />
+            <TrendingSidebar events={events} />
+          </div>
+        )}
+
+        {/* Section header */}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">
+            {showHero ? "全部市场" : activeCategory === "trending" ? "热门市场" : "市场"}
+          </h2>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {filtered.length} 个市场
+          </span>
+        </div>
+
+        {/* Market grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((event) => (
+            <MarketCard key={event.id} event={event} />
+          ))}
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="py-20 text-center text-sm text-muted-foreground">
+            没有找到相关市场
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
