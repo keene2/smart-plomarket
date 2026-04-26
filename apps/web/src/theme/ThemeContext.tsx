@@ -1,10 +1,10 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { ThemeMode } from "./tokens";
 
-const STORAGE_KEY = "smart-plomarket:theme";
-const DEFAULT_MODE: ThemeMode = "light";
+export type ThemeMode = "light" | "dark";
+
+const STORAGE_KEY = "oracle:theme";
 
 type ThemeContextValue = {
   mode: ThemeMode;
@@ -15,29 +15,27 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(DEFAULT_MODE);
+  const [mode, setModeState] = useState<ThemeMode>("light");
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark") {
       setModeState(stored);
+      document.documentElement.classList.toggle("dark", stored === "dark");
     }
   }, []);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = mode;
-    document.documentElement.style.colorScheme = mode;
-  }, [mode]);
 
   const setMode = useCallback((next: ThemeMode) => {
     setModeState(next);
     window.localStorage.setItem(STORAGE_KEY, next);
+    document.documentElement.classList.toggle("dark", next === "dark");
   }, []);
 
   const toggle = useCallback(() => {
     setModeState((prev) => {
       const next: ThemeMode = prev === "light" ? "dark" : "light";
       window.localStorage.setItem(STORAGE_KEY, next);
+      document.documentElement.classList.toggle("dark", next === "dark");
       return next;
     });
   }, []);
@@ -49,8 +47,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    throw new Error("useTheme must be used within ThemeProvider");
-  }
+  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
   return ctx;
 }

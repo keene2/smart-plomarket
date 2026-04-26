@@ -1,22 +1,24 @@
 "use client";
 
-import { MoonOutlined, SunOutlined } from "@ant-design/icons";
-import { Segmented } from "antd";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/theme/ThemeContext";
-import type { ThemeMode } from "@/theme/tokens";
+import { cn } from "@/lib/utils";
 
 export function ThemeToggle() {
-  const { mode, setMode } = useTheme();
+  const { mode, toggle } = useTheme();
 
   return (
-    <Segmented
-      size="small"
-      value={mode}
-      onChange={(value) => setMode(value as ThemeMode)}
-      options={[
-        { value: "light", icon: <SunOutlined />, label: "Light" },
-        { value: "dark", icon: <MoonOutlined />, label: "Dark" }
-      ]}
-    />
+    <button
+      onClick={toggle}
+      className={cn(
+        "inline-flex items-center justify-center rounded-md p-2",
+        "border border-border bg-background hover:bg-accent",
+        "text-muted-foreground hover:text-foreground",
+        "transition-colors"
+      )}
+      aria-label={mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {mode === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
   );
 }
